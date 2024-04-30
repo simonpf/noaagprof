@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools"]  # REQUIRED if [build-system] table is used
+build-backend = "setuptools.build_meta"  # If not defined, then legacy behavior can happen.
+
+
+[project]
+name = "noaagprof"
+version = "0.0.1"
+description = "GPROF-NN AMSR2 retrieval for NOAA."
+
+readme = "README.md"
+requires-python = ">=3.8"
+license = {file = "LICENSE.txt"}
+keywords = ["sample", "setuptools", "development"]
+authors = [
+  {name = "Simon Pfreundschuh", email = "simon.pfreundschuh@colostate.edu" }
+]
