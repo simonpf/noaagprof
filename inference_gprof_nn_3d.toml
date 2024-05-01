@@ -11,23 +11,23 @@ probability_of_precipitation = {retrieval_output="ExceedanceProbability", thresh
 [retrieval_output.convective_precip]
 convective_precip = "ExpectedValue"
 
-[output.rain_water_path]
+[retrieval_output.rain_water_path]
 rain_water_path = "ExpectedValue"
 
-[output.ice_water_path]
+[retrieval_output.ice_water_path]
 ice_water_path = "ExpectedValue"
 
-[output.cloud_water_path]
+[retrieval_output.cloud_water_path]
 cloud_water_path = "ExpectedValue"
 
-[output.rain_water_content]
+[retrieval_output.rain_water_content]
 rain_water_content = "ExpectedValue"
 
-[output.snow_water_content]
+[retrieval_output.snow_water_content]
 snow_water_content = "ExpectedValue"
 
-[output.cloud_water_content]
+[retrieval_output.cloud_water_content]
 cloud_water_content = "ExpectedValue"
 
-[output.latent_heat]
+[retrieval_output.latent_heat]
 latent_heating = "ExpectedValue"
