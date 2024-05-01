@@ -11,6 +11,7 @@ from typing import Dict, List, Union, Tuple
 from gprof_nn.data.preprocessor import run_preprocessor
 from gprof_nn.data.l1c import L1CFile
 from gprof_nn import sensors
+import numpy as np
 import torch
 import xarray as xr
 
@@ -48,7 +49,7 @@ class InputLoader:
         self.config = config
 
 
-    def load_data(self, input_file: Path) -> Tuple[Dict[str, torch.tensor], Path, xr.Dataset]:
+    def load_data(self, input_file: Path) -> Tuple[Dict[str, torch.tensor], str, xr.Dataset]:
         """
         Load input data for a given file.
 
@@ -99,32 +100,12 @@ class InputLoader:
         tbs_full = np.nan * np.zeros((tbs.shape[:2] +(15,)), dtype=np.float32)
         tbs_full[..., sensor.gprof_channels] = tbs
 
-        # Loading of angles and ancillary data included here for completeness
-        # but ingnored by the non-ancillary-data models.
+        # Order of dimensions should be [batch, channels, scans, pixel].
+        # [None] adds dummy batch dimension.
+        tbs_full = np.transpose(tbs_full, (2, 0, 1))[None]
 
-        angs = input_data.earth_incidence_angle.data
-        angs[angs < -100] = np.nan
-        angs_full = np.nan * np.zeros((angs.shape[:2] +(15,)), dtype=np.float32)
-        angs_full[..., sensor.gmi_channels] = angs
-
-        anc = np.stack([input_data[var] for var in ANCILLARY_VARIABLES], -1)
-
-        if self.config == "1d":
-            return {
-                "brightness_temperatures": torch.tensor(tbs_full.reshape(-1, 15)),
-                "viewing_angles": torch.tensor(angs_full.reshape(-1, 15)),
-                "ancillary_data": torch.tensor(anc.reshape(-1, 8)),
-            }, filename, input_data
-
-        tbs_full = np.transpose(tbs_full, (2, 0, 1))
-        angs_full = np.transpose(angs_full, (2, 0, 1))
-        anc = np.transpose(anc, (2, 0, 1))
-
-        # Filename and input_data are returned to reuse them in 'finalize_results'.
         return {
-            "brightness_temperatures": torch.tensor(tbs_full),
-            "viewing_angles": torch.tensor(angs_full),
-            "ancillary_data": torch.tensor(anc),
+            "brightness_temperatures": torch.tensor(tbs_full)
         }, filename, input_data
 
     def __len__(self):
@@ -143,7 +124,7 @@ class InputLoader:
     def finalize_results(
             self,
             results: Dict[str, torch.Tensor],
-            filename: Path,
+            filename: str,
             preprocessor_data: xr.Dataset
     ) -> xr.Dataset:
         """
@@ -167,18 +148,33 @@ class InputLoader:
         dims = ("levels", "scans", "pixels")
 
         for var, tensor in results.items():
+
+            # Discard dummy dimensions.
+            tensor = tensor.squeeze()
+
             if var == "surface_precip_terciles":
                 data["surface_precip_1st_tercile"] = (
                     ("scans", "pixels"), tensor[0].numpy()
                 )
+                data["surface_precip_1st_tercile"].encoding = {"dtype": "float32", "zlib": True}
                 data["surface_precip_2nd_tercile"] = (
                     ("scans", "pixels"),
                     tensor[1].numpy()
                 )
+                data["surface_precip_2nd_tercile"].encoding = {"dtype": "float32", "zlib": True}
             else:
-                dims_v = dims[-tensor.ndim():]
+                dims_v = dims[-tensor.dim():]
                 data[var] = (dims_v, tensor.numpy())
+                # Use compressiong to keep file size reasonable.
+                data[var].encoding = {"dtype": "float32", "zlib": True}
 
-        output_filename = filename.replace("1C-R", "2A").replace("1C", "2A")
-        output_filename = output_filename.with_suffix(".nc")
-        return data
+
+        # Quick and dirty way to transform 1C filename to 2A filename
+        output_filename = (
+            filename.replace("1C-R", "2A")
+            .replace("1C", "2A")
+            .replace("HDF5", "nc")
+        )
+
+        # Return results as xr.Dataset and filename to use to save data.
+        return data, output_filename
