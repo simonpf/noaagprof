@@ -63,7 +63,7 @@ class InputLoader:
             A tuple ``(input_data, input_filename, preprocessor_data)``, where:
                 - ``input_data`` is a dictionary containing a single key-value pair "brightness_temperatures"
                   containing a torch.Tensor with all observations in the given file as a 3D tensor (if config is '3D')
-                  or 2D tensor (if config is '2D').
+                  or 1D tensor (if config is '1D').
                 - ``input_filename``: Is a Path object pointing to the input file.
                 - ``preprocessor_data``: Is
 
@@ -100,9 +100,14 @@ class InputLoader:
         tbs_full = np.nan * np.zeros((tbs.shape[:2] +(15,)), dtype=np.float32)
         tbs_full[..., sensor.gprof_channels] = tbs
 
-        # Order of dimensions should be [batch, channels, scans, pixel].
-        # [None] adds dummy batch dimension.
-        tbs_full = np.transpose(tbs_full, (2, 0, 1))[None]
+        if self.config.lower() == "1d":
+            # For 1D retrievals, the order of dimensions should
+            # be [batch, channels].
+            tbs_full = tbs_full.reshape(-1, 15)
+        else:
+            # For convolutional (3D) retrievals, the order of dimensions should
+            # be [batch, channels, scans, pixel]. [None] adds dummy batch dimension.
+            tbs_full = np.transpose(tbs_full, (2, 0, 1))[None]
 
         return {
             "brightness_temperatures": torch.tensor(tbs_full)
@@ -151,6 +156,9 @@ class InputLoader:
 
             # Discard dummy dimensions.
             tensor = tensor.squeeze()
+            if self.config.lower() == "1d":
+                tensor = tensor.reshape(shape + tensor.shape[2:])
+                tensor = tensor.transpose((2, 0, 1))
 
             if var == "surface_precip_terciles":
                 data["surface_precip_1st_tercile"] = (
