@@ -36,9 +36,12 @@ class InputLoader:
                 collection of input files or an input folder.
             config: A string defining the retrieval configuration: '1D' or '3D'
         """
+        if isinstance(inputs, str):
+            inputs = Path(inputs)
+
         # If input is a folder, find all .HDF5 files.
-        if isinstance(inputs, Path) and path.is_dir():
-            self.files = sorted(list(path.glob("**/*.HDF5")))
+        if isinstance(inputs, Path) and inputs.is_dir():
+            self.files = sorted(list(inputs.glob("**/*.HDF5")))
         else:
             # If input is a list assume its list of input files.
             if isinstance(inputs, list):
@@ -110,7 +113,7 @@ class InputLoader:
             tbs_full = np.transpose(tbs_full, (2, 0, 1))[None]
 
         return {
-            "brightness_temperatures": torch.tensor(tbs_full)
+            "brightness_temperatures": torch.tensor(tbs_full),
         }, filename, input_data
 
     def __len__(self):
@@ -157,8 +160,9 @@ class InputLoader:
             # Discard dummy dimensions.
             tensor = tensor.squeeze()
             if self.config.lower() == "1d":
-                tensor = tensor.reshape(shape + tensor.shape[2:])
-                tensor = tensor.transpose((2, 0, 1))
+                tensor = tensor.reshape(shape + tensor.shape[1:])
+                if tensor.dim() > 2:
+                    tensor = torch.permute(tensor, (2, 0, 1))
 
             if var == "surface_precip_terciles":
                 data["surface_precip_1st_tercile"] = (
