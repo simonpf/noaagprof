@@ -36,9 +36,12 @@ class InputLoader:
                 collection of input files or an input folder.
             config: A string defining the retrieval configuration: '1D' or '3D'
         """
+        if isinstance(inputs, str):
+            inputs = Path(inputs)
+
         # If input is a folder, find all .HDF5 files.
-        if isinstance(inputs, Path) and path.is_dir():
-            self.files = sorted(list(path.glob("**/*.HDF5")))
+        if isinstance(inputs, Path) and inputs.is_dir():
+            self.files = sorted(list(inputs.glob("**/*.HDF5")))
         else:
             # If input is a list assume its list of input files.
             if isinstance(inputs, list):
