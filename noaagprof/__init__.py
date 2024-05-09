@@ -15,6 +15,8 @@ import numpy as np
 import torch
 import xarray as xr
 
+import h5py # to read in GCOM-W1 AMSR2 level1b file. Used by read_noaa_gcom_l1b_file (veljko)
+
 
 class InputLoader:
     """
@@ -75,11 +77,68 @@ class InputLoader:
             to the 'finalize_results' method defined bleow after performing the inference. They are used their
             to determine the output filename and to include ancillary data in the retrieval results.
         """
-        input_file = Path(input_file)
-        l1c_file = L1CFile(input_file)
-        sensor = l1c_file.sensor
-        input_data = run_preprocessor(input_file, sensor)
 
+        # Veljko: a function to read in and resample GCOMW1-AMSR2 TBs
+        def read_noaa_gcom_l1b_file(file_path):
+        
+          # read in the data
+          with h5py.File(file_path, 'r') as file:
+        
+            # Read specific dataset
+            dataset_name=                            \
+            ["Brightness Temperature (10.7GHz,V)"  , \
+             "Brightness Temperature (10.7GHz,H)"  , \
+             "Brightness Temperature (18.7GHz,V)"  , \
+             "Brightness Temperature (18.7GHz,H)"  , \
+             "Brightness Temperature (23.8GHz,V)"  , \
+             "Brightness Temperature (23.8GHz,H)"  , \
+             "Brightness Temperature (36.5GHz,V)"  , \
+             "Brightness Temperature (36.5GHz,H)"  , \
+             "Brightness Temperature (89.0GHz-A,V)", \
+             "Brightness Temperature (89.0GHz-A,H)"]
+        
+            ch_count=0 # channel counter, for indexing purposes
+        
+            # loop over variables to read from l1b and store into array
+            for tb in dataset_name:
+              if tb in file:
+                data_raw = file[tb]
+              else:
+                print("Dataset", tb, "not found in the file.")
+        
+              # Check if the dataset has a scale factor attribute
+              if 'SCALE FACTOR' in data_raw.attrs:
+                scale_factor = data_raw.attrs['SCALE FACTOR']
+        
+                # Apply the scale factor to obtain the original data
+                data = data_raw * scale_factor
+        
+              #else:
+                #print("Dataset", tb, "does not have a scale factor.")
+        
+              # declare output array. Use the 1st channel to determine the size (i.e., # of scans)
+              if tb == dataset_name[0]:
+                data_out = np.empty((data.shape[0],486,len(dataset_name)),dtype=float)
+        
+              # for all low freq. channels (0-7) replicate pixels along the scanline to match the high freq. sampling
+              if ch_count <= 7:
+                data = np.repeat(data, 2, axis=1)
+        
+              # Store data into the output array
+              data_out[:,:,ch_count]=np.array(data)
+        
+              # increase channel count
+              ch_count=ch_count+1
+        
+          return data_out
+
+
+        input_file = Path(input_file)
+     #  l1c_file = L1CFile(input_file)                     # veljko
+        l1c_file = L1CFile('../data_gcom/1C.GCOMW1.AMSR2.XCAL2016-V.20221231-S081953-E095845.056500.V07A.HDF5') # veljko
+        sensor = l1c_file.sensor                    
+     #  input_data = run_preprocessor(input_file, sensor)  # veljko
+        input_data = None                                  # veljko
         filename = input_file.name
 
         # Tbs and angles must be expanded to the 15 GPROF channels.
@@ -98,7 +157,9 @@ class InputLoader:
         #      8 |  89        |  "V"
         #      9 |  89        |  "H"
         #
-        tbs = input_data.brightness_temperatures.data
+
+      # tbs = input_data.brightness_temperatures.data  # veljko
+        tbs = read_noaa_gcom_l1b_file(input_file)      # veljko
         tbs[tbs < 0] = np.nan
         tbs_full = np.nan * np.zeros((tbs.shape[:2] +(15,)), dtype=np.float32)
         tbs_full[..., sensor.gprof_channels] = tbs
@@ -110,6 +171,7 @@ class InputLoader:
         return {
             "brightness_temperatures": torch.tensor(tbs_full)
         }, filename, input_data
+
 
     def __len__(self):
         """
@@ -145,6 +207,40 @@ class InputLoader:
             A tuple ``(results, output_filename)`` containing the potentially updated retrieval results and
             the ``output_filename`` to use to store the retrieval results.
         """
+
+        #### ** Veljko *********************************** ###
+        #### ********************************************* ###
+        #### ********************************************* ###
+
+        # Collect precip rate data and spit it out into a file
+
+        dims = ("levels", "scans", "pixels")
+
+        for var, tensor in results.items():
+
+            # Discard dummy dimensions.
+            tensor = tensor.squeeze()
+
+            # (veljko) pull out only the 'surface_precip' values and write them out into a file
+            if var == "surface_precip":
+
+               dims_v = dims[-tensor.dim():]
+               data=(dims_v, tensor.numpy())
+               data=(tensor.numpy())
+
+               # Write the data into a file
+               with open('noaagprof_test_output.txt', "w") as file:
+                   for element in data:
+                      file.write(str(element) + "\n")
+
+               exit() # veljko
+
+        exit() #veljko
+        #### ********************************************* ###
+        #### *************** DONE. EXIT. ***************** ###
+        #### ********************************************* ###
+        #### ** Veljko *********************************** ###
+
         data = preprocessor_data.copy()
         shape = (data.scans.size, data.pixels.size)
 
