@@ -95,7 +95,9 @@ class InputLoader:
              "Brightness Temperature (36.5GHz,V)"  , \
              "Brightness Temperature (36.5GHz,H)"  , \
              "Brightness Temperature (89.0GHz-A,V)", \
-             "Brightness Temperature (89.0GHz-A,H)"]
+             "Brightness Temperature (89.0GHz-A,H)", \
+             "Latitude of Observation Point for 89A", \
+             "Longitude of Observation Point for 89A"]
         
             ch_count=0 # channel counter, for indexing purposes
         
@@ -130,13 +132,17 @@ class InputLoader:
               # increase channel count
               ch_count=ch_count+1
         
-          return data_out
+          tbs_out=data_out[:,:,0:10]
+          lon    =data_out[:,:,-1]
+          lat    =data_out[:,:,-2]
+
+          return tbs_out, lat, lon
 
 
         input_file = Path(input_file)
      #  l1c_file = L1CFile(input_file)                     # veljko
-        l1c_file = L1CFile('../data_gcom/1C.GCOMW1.AMSR2.XCAL2016-V.20221231-S081953-E095845.056500.V07A.HDF5') # veljko
-        sensor = l1c_file.sensor                    
+     #  l1c_file = L1CFile('../data_gcom/1C.GCOMW1.AMSR2.XCAL2016-V.20240414-S060351-E074243.063343.V07A.HDF5') # veljko
+     #  sensor = l1c_file.sensor                    
      #  input_data = run_preprocessor(input_file, sensor)  # veljko
         input_data = None                                  # veljko
         filename = input_file.name
@@ -158,11 +164,10 @@ class InputLoader:
         #      9 |  89        |  "H"
         #
 
-      # tbs = input_data.brightness_temperatures.data  # veljko
-        tbs = read_noaa_gcom_l1b_file(input_file)      # veljko
+        tbs, lat, lon = read_noaa_gcom_l1b_file(input_file)      # veljko
         tbs[tbs < 0] = np.nan
         tbs_full = np.nan * np.zeros((tbs.shape[:2] +(15,)), dtype=np.float32)
-        tbs_full[..., sensor.gprof_channels] = tbs
+        tbs_full[..., :10] = tbs  # populate only the first 10 channels (AMSR2)
 
         # Order of dimensions should be [batch, channels, scans, pixel].
         # [None] adds dummy batch dimension.
@@ -170,7 +175,8 @@ class InputLoader:
 
         return {
             "brightness_temperatures": torch.tensor(tbs_full)
-        }, filename, input_data
+        }, filename, lat, lon
+       # }, filename, input_data
 
 
     def __len__(self):
@@ -190,7 +196,8 @@ class InputLoader:
             self,
             results: Dict[str, torch.Tensor],
             filename: str,
-            preprocessor_data: xr.Dataset
+            lat, lon 
+           # preprocessor_data: xr.Dataset
     ) -> xr.Dataset:
         """
         This function is called after inference has been performed on all input data from a given file.
@@ -208,41 +215,12 @@ class InputLoader:
             the ``output_filename`` to use to store the retrieval results.
         """
 
-        #### ** Veljko *********************************** ###
-        #### ********************************************* ###
-        #### ********************************************* ###
+       # data = preprocessor_data.copy()
+        data = xr.Dataset({
+            'latitude' :(('scans','pixels'),lat) ,
+            'longitude':(('scans','pixels'),lon) })
 
-        # Collect precip rate data and spit it out into a file
-
-        dims = ("levels", "scans", "pixels")
-
-        for var, tensor in results.items():
-
-            # Discard dummy dimensions.
-            tensor = tensor.squeeze()
-
-            # (veljko) pull out only the 'surface_precip' values and write them out into a file
-            if var == "surface_precip":
-
-               dims_v = dims[-tensor.dim():]
-               data=(dims_v, tensor.numpy())
-               data=(tensor.numpy())
-
-               # Write the data into a file
-               with open('noaagprof_test_output.txt', "w") as file:
-                   for element in data:
-                      file.write(str(element) + "\n")
-
-               exit() # veljko
-
-        exit() #veljko
-        #### ********************************************* ###
-        #### *************** DONE. EXIT. ***************** ###
-        #### ********************************************* ###
-        #### ** Veljko *********************************** ###
-
-        data = preprocessor_data.copy()
-        shape = (data.scans.size, data.pixels.size)
+       # shape = (data.scans.size, data.pixels.size)
 
         dims = ("levels", "scans", "pixels")
 
@@ -273,6 +251,8 @@ class InputLoader:
             filename.replace("1C-R", "2A")
             .replace("1C", "2A")
             .replace("HDF5", "nc")
+            .replace("h5", "nc")
+            .replace("L1B", "noaagprof_AMSR2_PRECIP_v4_v0")
         )
 
         # Return results as xr.Dataset and filename to use to save data.
