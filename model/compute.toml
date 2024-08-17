@@ -1,0 +1,3 @@
+accelerator = "cuda"
+devices = [0]
+

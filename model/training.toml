@@ -1,0 +1,34 @@
+#[warmup_1]
+#dataset_module = "noaagprof.training_data"
+#training_dataset = "TrainingDataset"
+#training_dataset_args = {paths=["/home/simon/data/noaagprof/training_data/mrms", "/home/simon/data/noaagprof/training_data/cmb"]}
+#validation_dataset_args = {paths=["/home/simon/data/noaagprof/validation_data/mrms", "/home/simon/data/noaagprof/training_data/cmb"]}
+#n_epochs = 20
+#optimizer = "AdamW"
+#optimizer_args = {lr = 5e-4}
+#scheduler = "Warmup"
+#input_datasets = ["cpcir"]
+#reference_datasets = ["cmb_and_mrms"]
+#batch_size = 8
+#sample_rate = 0.1
+#metrics = ["Bias", "MSE", "CorrelationCoef", "PlotSamples"]
+#scene_size = 256
+#n_dataloader_workers = 4
+
+[stage_1]
+dataset_module = "noaagprof.training_data"
+training_dataset = "TrainingDataset"
+training_dataset_args = {paths=["/home/simon/data/noaagprof/training_data/mrms", "/home/simon/data/noaagprof/training_data/cmb"]}
+validation_dataset_args = {paths=["/home/simon/data/noaagprof/validation_data/mrms", "/home/simon/data/noaagprof/training_data/cmb"]}
+n_epochs = 40
+optimizer = "AdamW"
+optimizer_args = {lr = 5e-4}
+scheduler = "CosineAnnealingLR"
+scheduler_args = {T_max = 40}
+input_datasets = ["cpcir"]
+reference_datasets = ["cmb_and_mrms"]
+batch_size = 4
+metrics = ["Bias", "MSE", "CorrelationCoef", "PlotSamples"]
+#reuse_optimizer = true
+scene_size = 256
+n_dataloader_workers = 4
