@@ -113,7 +113,7 @@ class InputLoader:
             tbs_full = np.transpose(tbs_full, (2, 0, 1))[None]
 
         return {
-            "brightness_temperatures": torch.tensor(tbs_full)
+            "brightness_temperatures": torch.tensor(tbs_full),
         }, filename, input_data
 
     def __len__(self):
@@ -160,8 +160,9 @@ class InputLoader:
             # Discard dummy dimensions.
             tensor = tensor.squeeze()
             if self.config.lower() == "1d":
-                tensor = tensor.reshape(shape + tensor.shape[2:])
-                tensor = tensor.transpose((2, 0, 1))
+                tensor = tensor.reshape(shape + tensor.shape[1:])
+                if tensor.dim() > 2:
+                    tensor = torch.permute(tensor, (2, 0, 1))
 
             if var == "surface_precip_terciles":
                 data["surface_precip_1st_tercile"] = (
