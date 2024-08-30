@@ -152,8 +152,12 @@ class TrainingDataset(Dataset):
         convective[precip_type > 0.0] = 0.0
         convective[torch.isclose(precip_type, torch.tensor(2.0))] = 1.0
         targets["convective"] = convective
-        conv_precip = torch.clone(targets["surface_precip"])
-        conv_precip[convective < 1] = 0.0
+        conv_precip = np.nan * torch.clone(targets["surface_precip"])
+        conv_mask = convective >= 1.0
+        conv_precip[conv_mask] = targets["surface_precip"][conv_mask]
+        other_mask = convective < 1.0
+        conv_precip[other_mask] = 0.0
+
         targets["convective_precip"] = conv_precip
 
         # Horizontal flip
