@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Tuple, Union
 import os
 from pathlib import Path
 
+import hdf5plugin
 import numpy as np
 import torch
 from torch.utils.data import Dataset
