@@ -1,0 +1,33 @@
+tile_size = 256
+spatial_overlap = 64
+
+[retrieval_output.surface_precip.surface_precip]
+retrieval_output = "ExpectedValue"
+
+[retrieval_output.precipitation_type.precip_type_probabilities]
+retrieval_output = "ClassProbability"
+dim_name = "precip_type"
+class_names = ["clear_sky", "stratiform", "convecive"]
+
+[retrieval_output.convective.convective]
+retrieval_output = "ClassProbability"
+dim_name = "convective_probability"
+class_names = ["convective"]
+
+[retrieval_output.convective_precip.convective_precip]
+retrieval_output = "ExpectedValue"
+
+[retrieval_output.rain_water_content.rain_water_content]
+retrieval_output = "ExpectedValue"
+
+[retrieval_output.snow_water_content.snow_water_content]
+retrieval_output = "ExpectedValue"
+
+[retrieval_output.latent_heating.latent_heating]
+retrieval_output = "ExpectedValue"
+
+[retrieval_output.rain_water_path.rain_water_path]
+retrieval_output = "ExpectedValue"
+
+[retrieval_output.snow_water_path]
+retrieval_output = "ExpectedValue"
