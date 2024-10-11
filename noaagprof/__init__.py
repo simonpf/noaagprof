@@ -8,9 +8,6 @@ for NOAA.
 from pathlib import Path
 from typing import Dict, List, Union, Tuple
 
-from gprof_nn.data.preprocessor import run_preprocessor
-from gprof_nn.data.l1c import L1CFile
-from gprof_nn import sensors
 from pansat import Granule
 from pansat.products.satellite.noaa.gaasp import l1b_gcomw1_amsr2
 import numpy as np
@@ -61,12 +58,13 @@ class InputLoader:
             input_file: A path object pointing to an input file.
 
         Return:
-            A tuple ``(input_data, input_filename, preprocessor_data)``, where:
+            A tuple ``(input_data, input_filename, aux_data)``, where:
                 - ``input_data`` is a dictionary containing a single key-value pair "brightness_temperatures"
                   containing a torch.Tensor with all observations in the given file as a 3D tensor (if config is '3D')
                   or 1D tensor (if config is '1D').
                 - ``input_filename``: Is a Path object pointing to the input file.
-                - ``preprocessor_data``: Is
+                - ``aux_data``: Contains auxiliary data such as geolocation coordinates
+                  from the input file.
 
         Note:
             The inference function of 'pytorch_retrieve' will pass ``input_filename`` and ``preprocessor_data``
