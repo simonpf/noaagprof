@@ -15,3 +15,6 @@ keywords = ["sample", "setuptools", "development"]
 authors = [
   {name = "Simon Pfreundschuh", email = "simon.pfreundschuh@colostate.edu" }
 ]
+
+[tool.setuptools]
+packages = ["noaagprof"]

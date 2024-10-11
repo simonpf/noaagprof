@@ -9,7 +9,10 @@ dependencies:
   - pytorch::pytorch
   - pytorch::torchvision
   - pytorch::torchaudio
-  - pytorch::cpuonly
+  - pytorch::pytorch-cuda=11.8
+  - beautifulsoup4
+  - lxml
+  - boto3
   - cfgrib
   - netcdf4
   - pyyaml
@@ -17,7 +20,9 @@ dependencies:
   - zarr
   - dask
   - appdirs
+  - hdf5
   - h5py
+  - pyhdf
   - donfig
   - pillow
   - numpy
@@ -26,9 +31,17 @@ dependencies:
   - llvm-openmp
   - lightning
   - protobuf
+  - pyarrow
+  - shapely
+  - paramiko
+  - pyproj
+  - filelock
+  - tomlkit
+  - requests
   - geopandas
   - jupyter-book
   - pip
   - pip:
+    - "git+https://github.com/see-geo/pansat@d3a8edbb45238b64d57ea2e4b88d493bca689ec7"
     - "git+https://github.com/simonpf/pytorch_retrieve"
     - "git+https://github.com/simonpf/gprof_nn@e7efaff182fd9fa73d6d9c4985f44542c654d879"

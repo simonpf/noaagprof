@@ -11,6 +11,8 @@ from typing import Dict, List, Union, Tuple
 from gprof_nn.data.preprocessor import run_preprocessor
 from gprof_nn.data.l1c import L1CFile
 from gprof_nn import sensors
+from pansat import Granule
+from pansat.products.satellite.noaa.gaasp import l1b_gcomw1_amsr2
 import numpy as np
 import torch
 import xarray as xr
@@ -23,18 +25,15 @@ class InputLoader:
 
     Attributes:
         files: A list of the input files to be loaded.
-        config: A string specifying the retrieval config: '1D' or '3D'.
     """
     def __init__(
             self,
             inputs: Union[str, Path, List[str], List[Path]],
-            config: str,
     ):
         """
         Args:
             inputs: A single string or Path object, or lists thereof, pointing to either a
                 collection of input files or an input folder.
-            config: A string defining the retrieval configuration: '1D' or '3D'
         """
         if isinstance(inputs, str):
             inputs = Path(inputs)
@@ -49,15 +48,14 @@ class InputLoader:
             else:
                 # If input is a single file, turn it into a list.
                 self.files = [inputs]
-        self.config = config
 
 
     def load_data(self, input_file: Path) -> Tuple[Dict[str, torch.tensor], str, xr.Dataset]:
         """
         Load input data for a given file.
 
-        Runs the preprocessor on the given L1C file and loads the retrieval input data
-        from the results.
+        Loads the input data from a NOAA AMSR2 L1B file into a brightness temperature tensor in the
+        expected format.
 
         Args:
             input_file: A path object pointing to an input file.
@@ -75,45 +73,67 @@ class InputLoader:
             to the 'finalize_results' method defined bleow after performing the inference. They are used their
             to determine the output filename and to include ancillary data in the retrieval results.
         """
-        input_file = Path(input_file)
-        l1c_file = L1CFile(input_file)
-        sensor = l1c_file.sensor
-        input_data = run_preprocessor(input_file, sensor)
-
-        filename = input_file.name
-
-        # Tbs and angles must be expanded to the 15 GPROF channels.
-        # For AMSR2 those are frequencies
-        #
-        #  Index | Freq [GHz] |  Pol
-        #  ------|-----------|-----
-        #      0 |  10.65     |  "V"
-        #      1 |  10.65     |  "H"
-        #      2 |  18.7      |  "V"
-        #      3 |  18.7      |  "H"
-        #      4 |  23.8      |  "V"
-        #      5 |  23.8      |  "H"
-        #      6 |  36.5      |  "V"
-        #      7 |  36.5      |  "H"
-        #      8 |  89        |  "V"
-        #      9 |  89        |  "H"
-        #
-        tbs = input_data.brightness_temperatures.data
-        tbs[tbs < 0] = np.nan
-        tbs_full = np.nan * np.zeros((tbs.shape[:2] +(15,)), dtype=np.float32)
-        tbs_full[..., sensor.gprof_channels] = tbs
-
-        if self.config.lower() == "1d":
-            # For 1D retrievals, the order of dimensions should
-            # be [batch, channels].
-            tbs_full = tbs_full.reshape(-1, 15)
+        if isinstance(input_file, Granule):
+            l1b_data = input_file.open()
+            filename = input_file.file_record.filename
         else:
-            # For convolutional (3D) retrievals, the order of dimensions should
-            # be [batch, channels, scans, pixel]. [None] adds dummy batch dimension.
-            tbs_full = np.transpose(tbs_full, (2, 0, 1))[None]
+            l1b_data = l1b_gcomw1_amsr2.open(input_file)
+            filename = input_file
+
+        lats = l1b_data.latitude_s2.data
+        lons = l1b_data.longitude_s2.data
+
+        tbs_s1 = np.repeat(l1b_data.tbs_s1.data, 2, axis=1)
+        tbs_s2 = l1b_data.tbs_s2.data
+        tbs_s3 = l1b_data.tbs_s3.data
+        sc_lon = l1b_data.spacecraft_longitude.data
+        sc_lat = l1b_data.spacecraft_latitude.data
+        sc_alt = l1b_data.spacecraft_altitude.data
+        tbs = np.concatenate((tbs_s1, tbs_s2, tbs_s3), axis=-1)
+        scan_time = l1b_data.scan_time.data
+
+        # Upsample fields
+        n_scans, n_pixels, n_channels = tbs.shape
+
+        lons_hr = np.zeros_like(lons, shape=(2 * n_scans - 1, n_pixels))
+        lons_hr[::2] = lons
+        lons_hr[1::2] = 0.5 * (lons[:-1] + lons[1:])
+        lats_hr = np.zeros_like(lats, shape=(2 * n_scans - 1, n_pixels))
+        lats_hr[::2] = lats
+        lats_hr[1::2] = 0.5 * (lats[:-1] + lats[1:])
+        tbs_hr = np.zeros_like(tbs, shape=(2 * n_scans - 1, n_pixels, n_channels))
+        tbs_hr[::2] = tbs
+        tbs_hr[1::2] = 0.5 * (tbs[:-1] + tbs[1:])
+        scan_time_hr = np.zeros_like(scan_time, shape=(2 * n_scans - 1))
+        scan_time_hr[::2] = scan_time
+        scan_time_hr[1::2] = scan_time[1:] + 0.5 * (scan_time[1:] - scan_time[:-1])
+
+        sc_lon_hr = np.zeros_like(sc_lon, shape=(2 * n_scans - 1))
+        sc_lon_hr[::2] = sc_lon
+        sc_lon_hr[1::2] = 0.5 * (sc_lon[:-1] + sc_lon[1:])
+        sc_lat_hr = np.zeros_like(sc_lat, shape=(2 * n_scans - 1))
+        sc_lat_hr[::2] = sc_lat
+        sc_lat_hr[1::2] = 0.5 * (sc_lat[:-1] + sc_lat[1:])
+        sc_alt_hr = np.zeros_like(sc_alt, shape=(2 * n_scans - 1))
+        sc_alt_hr[::2] = sc_alt
+        sc_alt_hr[1::2] = 0.5 * (sc_alt[:-1] + sc_alt[1:])
+
+        input_data = xr.Dataset({
+            "latitude": (("scan", "pixel"), lats_hr),
+            "longitude": (("scan", "pixel"), lons_hr),
+            "observations": (("scan", "pixel", "channels"), tbs_hr),
+            "spacecraft_longitude": (("scan"), sc_lon_hr),
+            "spacecraft_latitude": (("scan"), sc_lat_hr),
+            "spacecraft_altitude": (("scan"), sc_alt_hr),
+            "scan_time": (("scan"), scan_time_hr.astype("datetime64[ns]"))
+        })
+
+        tbs = input_data.observations.data
+        tbs[tbs < 0] = np.nan
+        tbs = np.transpose(tbs, (2, 0, 1))
 
         return {
-            "brightness_temperatures": torch.tensor(tbs_full),
+            "amsr2": torch.tensor(tbs)[None],
         }, filename, input_data
 
     def __len__(self):
@@ -133,7 +153,7 @@ class InputLoader:
             self,
             results: Dict[str, torch.Tensor],
             filename: str,
-            preprocessor_data: xr.Dataset
+            input_data: xr.Dataset
     ) -> xr.Dataset:
         """
         This function is called after inference has been performed on all input data from a given file.
@@ -144,38 +164,37 @@ class InputLoader:
             results: A dictionary mapping retrieval output names to corresponding
                 tensors containing the results.
             filename: The filename as returned by the 'load_data' method.
-            preprocessor_data: The preprocessor data as returned by the 'load_data' method.
+            input_data: The input data as returned by the 'load_data' method.
 
         Return:
             A tuple ``(results, output_filename)`` containing the potentially updated retrieval results and
             the ``output_filename`` to use to store the retrieval results.
         """
-        data = preprocessor_data.copy()
-        shape = (data.scans.size, data.pixels.size)
+        data = input_data.copy()
+        shape = (data.scan.size, data.pixel.size)
 
-        dims = ("levels", "scans", "pixels")
+        dims = ("levels", "scan", "pixel")
 
         for var, tensor in results.items():
 
             # Discard dummy dimensions.
             tensor = tensor.squeeze()
-            if self.config.lower() == "1d":
-                tensor = tensor.reshape(shape + tensor.shape[1:])
-                if tensor.dim() > 2:
-                    tensor = torch.permute(tensor, (2, 0, 1))
 
             if var == "surface_precip_terciles":
                 data["surface_precip_1st_tercile"] = (
-                    ("scans", "pixels"), tensor[0].numpy()
+                    ("scan", "pixel"), tensor[0].numpy()
                 )
                 data["surface_precip_1st_tercile"].encoding = {"dtype": "float32", "zlib": True}
                 data["surface_precip_2nd_tercile"] = (
-                    ("scans", "pixels"),
+                    ("scan", "pixel"),
                     tensor[1].numpy()
                 )
                 data["surface_precip_2nd_tercile"].encoding = {"dtype": "float32", "zlib": True}
             else:
                 dims_v = dims[-tensor.dim():]
+                if tensor.shape[0] < 28:
+                    dims_v = ("classes",) + dims_v[1:]
+
                 data[var] = (dims_v, tensor.numpy())
                 # Use compressiong to keep file size reasonable.
                 data[var].encoding = {"dtype": "float32", "zlib": True}
@@ -183,8 +202,8 @@ class InputLoader:
 
         # Quick and dirty way to transform 1C filename to 2A filename
         output_filename = (
-            filename.replace("1C-R", "2A")
-            .replace("1C", "2A")
+            filename.replace("1B", "2A")
+            .replace("1B", "2A")
             .replace("HDF5", "nc")
         )
 
