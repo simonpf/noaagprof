@@ -9,7 +9,7 @@ retrieval_output = "ClassProbability"
 dim_name = "precip_type"
 class_names = ["clear_sky", "stratiform", "convecive"]
 
-[retrieval_output.convective.convective]
+[retrieval_output.convective.convective_probability]
 retrieval_output = "ClassProbability"
 dim_name = "convective_probability"
 class_names = ["convective"]
