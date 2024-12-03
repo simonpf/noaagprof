@@ -77,13 +77,13 @@ class TrainingDataset(Dataset):
         for path in paths:
             path = Path(path)
             input_files = sorted(list((path / "noaa").glob("*.nc")))
-            input_times = set(list(map(extract_time, input_files)))
+            input_times = list(map(extract_time, input_files))
             input_files = dict(list(zip(input_times, input_files)))
             target_files = sorted(list((path / "target").glob("*.nc")))
-            target_times = set(list(map(extract_time, target_files)))
+            target_times = list(map(extract_time, target_files))
             target_files = dict(list(zip(target_times, target_files)))
 
-            matched_times = set(input_files) & set(target_files)
+            matched_times = sorted(list(set(input_files) & set(target_files)))
             all_input_files += [input_files[time] for time in matched_times]
             all_target_files += [target_files[time] for time in matched_times]
 
@@ -160,6 +160,7 @@ class TrainingDataset(Dataset):
         conv_precip[other_mask] = 0.0
 
         targets["convective_precip"] = conv_precip
+        targets = {"surface_precip": targets["surface_precip"]}
 
         # Horizontal flip
         if self.augment:
