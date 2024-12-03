@@ -1,16 +1,27 @@
 # NOAAGPROF
 
-This repository contains documentation and required code to run GPROF-NN retrievals for AMSR2.
+NOAAGPROF is a neural-network-based precipitation retrieval for passive-microwave observations from the AMSR2 radiometer. It is based on a prototype for the next-generation GPROF-NN retrievals.
 
 ## Overview
 
-This repository contains a Python package called  ``noaagprof`` providing a single class ``InputLoader``.
-The ``InputLoader`` is reponsible for loading the retrieval input data from level-one files
-and converting it into the format expected by the retrieval. Additionally, it provides a callback
-function that is called to convert the raw retrieval results into the desired format. I hope the code
-to be sufficiently well documented to be easy to adapt to NOAA L1 files.
+This repository provides a Python package called  ``noaagprof``. The ``noaagprof`` package provides site-specific functionality to load training and inference data from NOAA's level 1B input files.
+
+The ``InputLoader`` class is reponsible for loading the retrieval input data from
+level-one files and converting it into the format expected by the retrieval.
+Additionally, it provides a callback function that is called to convert the raw
+retrieval results into the desired format. I hope the code to be sufficiently
+well documented to be easy to adapt to NOAA L1 files.
+
 
 ## Installation
+
+### Getting the code
+
+The easiest way to obtain the source code is by cloning the repository using git:
+
+``` shellsession
+git clone http://github.com/simonpf/noaagprof
+```
 
 ### Dependencies
 
@@ -37,9 +48,7 @@ The actual code to run the inference is provided by the ``pytorch_retrieve`` pac
 infers all information necessary to run a retrieval from a so-called *inference configuration*. The GPROF-NN
 ``*.pt`` model files contain such an inference config, which defines the default retrieval behavior. It can be
 further customized by providing an explicit path to an inference config file such as the
-``inference_gprof_nn_3d.toml`` in the repository. I have already set the input loader in the inference config to
-the ``noaagprof.InputLoader``, so by default those models will use the NOAAGPROF input loader for the
-retrievals.
+``noaagprof.toml`` in the repository. The input loader in the inference config file is set  to the ``noaagprof.InputLoader``, which is provided by this package.
 
 ### Command line
 

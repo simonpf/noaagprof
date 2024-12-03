@@ -76,7 +76,7 @@ class InputLoader:
             filename = input_file.file_record.filename
         else:
             l1b_data = l1b_gcomw1_amsr2.open(input_file)
-            filename = input_file
+            filename = input_file.name
 
         lats = l1b_data.latitude_s2.data
         lons = l1b_data.longitude_s2.data
