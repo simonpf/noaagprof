@@ -1,5 +1,6 @@
 tile_size = 256
 spatial_overlap = 64
+input_loader_class = "noaagprof.InputLoader"
 
 [retrieval_output.surface_precip.surface_precip]
 retrieval_output = "ExpectedValue"
@@ -29,5 +30,5 @@ retrieval_output = "ExpectedValue"
 [retrieval_output.rain_water_path.rain_water_path]
 retrieval_output = "ExpectedValue"
 
-[retrieval_output.snow_water_path]
+[retrieval_output.snow_water_path.snow_water_path]
 retrieval_output = "ExpectedValue"

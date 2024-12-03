@@ -26,11 +26,14 @@ class InputLoader:
     def __init__(
             self,
             inputs: Union[str, Path, List[str], List[Path]],
+            keep_profiles: bool = False
     ):
         """
         Args:
             inputs: A single string or Path object, or lists thereof, pointing to either a
                 collection of input files or an input folder.
+            keep_profiles: If 'True' rain and snow water path profiles will be written
+                to output. Otherwise not.
         """
         if isinstance(inputs, str):
             inputs = Path(inputs)
@@ -45,6 +48,8 @@ class InputLoader:
             else:
                 # If input is a single file, turn it into a list.
                 self.files = [inputs]
+
+        self.keep_profiles = keep_profiles
 
 
     def load_data(self, input_file: Path) -> Tuple[Dict[str, torch.tensor], str, xr.Dataset]:
@@ -190,8 +195,11 @@ class InputLoader:
                 data["surface_precip_2nd_tercile"].encoding = {"dtype": "float32", "zlib": True}
             else:
                 dims_v = dims[-tensor.dim():]
-                if tensor.shape[0] < 28:
+                if tensor.dim() > 2 and tensor.shape[0] < 28:
                     dims_v = ("classes",) + dims_v[1:]
+                else:
+                    if not self.keep_profiles:
+                        continue
 
                 data[var] = (dims_v, tensor.numpy())
                 # Use compressiong to keep file size reasonable.
@@ -203,6 +211,7 @@ class InputLoader:
             filename.replace("1B", "2A")
             .replace("1B", "2A")
             .replace("HDF5", "nc")
+            .replace("h5", "nc")
         )
 
         # Return results as xr.Dataset and filename to use to save data.

@@ -42,6 +42,14 @@ I recomment installing it in editable mode while actively working on it:
 pip install -e /path/to/noaagprof
 ```
 
+### Downloading the model
+
+The latest noaagprof model is available from [rain.atmos.colostate.edu/gprof_nn/noaagporf/noaagprof.pt](rain.atmos.colostate.edu/gprof_nn/noaagporf/noaagprof.pt). To download it run:
+
+``` shellsession
+wget https://rain.atmos.colostate.edu/gprof_nn/noaagporf/noaagprof.pt
+```
+
 ## Running retrievals
 
 The actual code to run the inference is provided by the ``pytorch_retrieve`` package. ``pytorch_retrieve``
@@ -68,6 +76,7 @@ Retrievals can also be run interactively using the ``run_inference`` function pr
 ``xarray.Datasets`` for all inputs provided by the input loader.
 
 ``` python
+from pytorch_retrieve.config import InferenceConfig
 from pytorch_retrieve.architectures import load_model
 from pytorch_retrieve.inference import run_inference
 from noaagprof import InputLoader
@@ -76,7 +85,7 @@ model = load_model("gprof_nn_3d_amsr2.pt")
 loader = InputLoader("/path/to/input_files", config="3d")
 # Use default inference settings from model.
 inference_config = model.inference_config
-results = run_inference(model, loader, inference_config=model.inference_config)
+results = run_inference(model, loader, inference_config=inference_config)
 ```
 
 
