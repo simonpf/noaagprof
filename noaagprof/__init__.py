@@ -195,11 +195,15 @@ class InputLoader:
                 data["surface_precip_2nd_tercile"].encoding = {"dtype": "float32", "zlib": True}
             else:
                 dims_v = dims[-tensor.dim():]
-                if tensor.dim() > 2 and tensor.shape[0] < 28:
-                    dims_v = ("classes",) + dims_v[1:]
-                else:
-                    if not self.keep_profiles:
+                if tensor.dim() > 2:
+                    # Skip profiles if storing not requested.
+                    if not self.keep_profiles and var in [
+                            "rain_water_conten",
+                            "snow_water_content",
+                            "latend_heating"
+                    ]:
                         continue
+                    dims_v = ("classes",) + dims_v[1:]
 
             data[var] = (dims_v, tensor.numpy())
             # Use compressiong to keep file size reasonable.
