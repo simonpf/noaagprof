@@ -35,8 +35,7 @@ conda activate noaagprof
 
 ### Installing ``noaagprof``
 
-To use the input loader defined in the ``noaagprof`` package, the package must be install in the current Python environment.
-I recomment installing it in editable mode while actively working on it:
+To use the input loader defined in the ``noaagprof`` package, the package must be installed in the ``noaagprof`` Conda environment. It is recommended installing it in editable mode while actively working on it:
 
 ``` shellsession
 pip install -e /path/to/noaagprof
@@ -89,5 +88,10 @@ results = run_inference(model, loader, inference_config=inference_config)
 ```
 
 
+### Enable storing of hydrometeor profiles
 
+In order keep the size of the output files manageable, the retrieval will by default discard retrieved profiles. To instead keep the profiles, invoke the inference with the additional argument ``--input_loader_args="{'keep_profiles': True}"``:
 
+``` shellsession
+pytorch_retrieve inference /path/to/model.pt /path/to/input_files --output_path /path/to/output  --input_loader_args="{'keep_profiles': True}"`
+```
