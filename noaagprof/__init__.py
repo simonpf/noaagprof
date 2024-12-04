@@ -201,9 +201,9 @@ class InputLoader:
                     if not self.keep_profiles:
                         continue
 
-                data[var] = (dims_v, tensor.numpy())
-                # Use compressiong to keep file size reasonable.
-                data[var].encoding = {"dtype": "float32", "zlib": True}
+            data[var] = (dims_v, tensor.numpy())
+            # Use compressiong to keep file size reasonable.
+            data[var].encoding = {"dtype": "float32", "zlib": True}
 
 
         # Quick and dirty way to transform 1C filename to 2A filename
