@@ -43,7 +43,7 @@ pip install -e /path/to/noaagprof
 
 ### Downloading the model
 
-The latest noaagprof model is available from [rain.atmos.colostate.edu/gprof_nn/noaagporf/noaagprof.pt](rain.atmos.colostate.edu/gprof_nn/noaagporf/noaagprof.pt). To download it run:
+The latest noaagprof model is available from [rain.atmos.colostate.edu/gprof_nn/noaagprof/noaagprof.pt](rain.atmos.colostate.edu/gprof_nn/noaagprof/noaagprof.pt). To download it run:
 
 ``` shellsession
 wget https://rain.atmos.colostate.edu/gprof_nn/noaagporf/noaagprof.pt
