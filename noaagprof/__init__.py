@@ -176,7 +176,11 @@ class InputLoader:
         data = input_data.copy()
         shape = (data.scan.size, data.pixel.size)
 
-        dims = ("levels", "scan", "pixel")
+        dims = ("scan", "pixel")
+        output_dims = {
+            28: "levels",
+            4: "precip_classes"
+        }
 
         for var, tensor in results.items():
 
@@ -203,7 +207,7 @@ class InputLoader:
                             "latend_heating"
                     ]:
                         continue
-                    dims_v = ("classes",) + dims_v[1:]
+                    dims_v = (output_dims[tensor.shape[0]],) + dims_v
 
             data[var] = (dims_v, tensor.numpy())
             # Use compressiong to keep file size reasonable.
