@@ -202,9 +202,9 @@ class InputLoader:
                 if tensor.dim() > 2:
                     # Skip profiles if storing not requested.
                     if not self.keep_profiles and var in [
-                            "rain_water_conten",
+                            "rain_water_content",
                             "snow_water_content",
-                            "latend_heating"
+                            "latent_heating"
                     ]:
                         continue
                     dims_v = (output_dims[tensor.shape[0]],) + dims_v
