@@ -213,6 +213,12 @@ class InputLoader:
             # Use compressiong to keep file size reasonable.
             data[var].encoding = {"dtype": "float32", "zlib": True}
 
+        alt = np.concatenate([0.5 + 0.5 * np.arange(20), np.arange(11, 19)])
+        data = data.assign_coords(altitude = (("levels",), alt))
+        data["precip_classes"] = (
+            ("precip_classes",),
+            ["No rain", "Stratiform", "Convective", "Other"]
+        )
 
         # Quick and dirty way to transform 1C filename to 2A filename
         output_filename = (
